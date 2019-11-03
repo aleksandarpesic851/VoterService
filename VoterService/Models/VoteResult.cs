@@ -9,5 +9,6 @@ namespace VoterService.Models
     {
         public int vote { get; set; }
         public int not_vote { get; set; }
+        public int registerdVoter { get; set; }
     }
 }

@@ -43,8 +43,8 @@ namespace VoterService.Controllers
             return true;
         }
 
-        [HttpGet]
-        public IActionResult CreateVoter([FromBody]VoterModel voter)
+        [HttpPost]
+        public IActionResult CreateUpdateVoter([FromBody]VoterModel voter)
         {
             // Check there is table for district, if not exist create new DB & table
             bool IsDbReady = PrepareDB(voter.district);
@@ -57,13 +57,21 @@ namespace VoterService.Controllers
                 });
             }
 
-            //Add new voter in database
-            _applicationDbContext.Voters.Add(voter);
+            //Add or Update new voter in database
+            if (voter.id > 0)
+            {
+                _applicationDbContext.Voters.Update(voter);
+            }
+            else
+            {
+                _applicationDbContext.Voters.Add(voter);
+            }
             _applicationDbContext.SaveChanges();
 
             //Generate Unique voter secret using id and nic
             string uniqueId = voter.id + "_" + voter.nic;
             uniqueId = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(uniqueId));
+            uniqueId = uniqueId.Replace("=", "");
             voter.userid = uniqueId;
             _applicationDbContext.Voters.Update(voter);
             _applicationDbContext.SaveChanges();
@@ -94,7 +102,8 @@ namespace VoterService.Controllers
             VoteResult results = new VoteResult();
 
             results.vote = _applicationDbContext.Voters.Where(e => e.vote_state == Global.VOTED).Count();
-            results.not_vote = _applicationDbContext.Voters.Where(e => e.vote_state != Global.VOTED || e.vote_state == null).Count();
+            results.not_vote = _applicationDbContext.Voters.Where(e => e.vote_state == Global.ENTERED).Count();
+            results.registerdVoter = _applicationDbContext.Voters.Count();
 
             return Ok(new Message<VoteResult>
             {
@@ -104,7 +113,7 @@ namespace VoterService.Controllers
             });
         }
 
-        [HttpGet]
+        [HttpPost]
         public IActionResult GetVoter([FromBody]VoterSearchModel voterSearch)
         {
             if (voterSearch == null)
@@ -171,11 +180,11 @@ namespace VoterService.Controllers
             });
         }
 
-        [HttpGet]
-        public IActionResult Vote(string userid, int district)
+        [HttpPost]
+        public IActionResult Vote([FromBody]Vote_Model vote)
         {
             // Check there is table for district, if not exist create new DB & table
-            bool IsDbReady = PrepareDB(district);
+            bool IsDbReady = PrepareDB(vote.district);
             if (!IsDbReady)
             {
                 return Ok(new Message<string>
@@ -186,10 +195,10 @@ namespace VoterService.Controllers
             }
             try
             {
-                VoterModel voter = _applicationDbContext.Voters.Where(e => e.userid == userid).First();
+                VoterModel voter = _applicationDbContext.Voters.Where(e => e.userid == vote.userid).First();
                 if (voter != null)
                 {
-                    voter.vote_state = Global.VOTED;
+                    voter.vote_state = vote.state;
                     _applicationDbContext.Voters.Update(voter);
                     _applicationDbContext.SaveChanges();
                     return Ok(new Message<int>
@@ -201,6 +210,38 @@ namespace VoterService.Controllers
             }
             catch
             { }
+
+            return Ok(new Message<int>
+            {
+                ReturnMessage = "Fail",
+                IsSuccess = false
+            });
+        }
+
+        [HttpPost]
+        public IActionResult DeleteVoter([FromBody]VoterSearchModel voterSearch)
+        {
+            if (voterSearch == null)
+            {
+                return Ok(new Message<int>
+                {
+                    ReturnMessage = "Fail",
+                    IsSuccess = false
+                });
+            }
+            try
+            {
+                PrepareDB(voterSearch.arrDistricts.First());
+                VoterModel resultVoter = _applicationDbContext.Voters.Where(s => s.userid == voterSearch.userID).First();
+                _applicationDbContext.Voters.Remove(resultVoter);
+                _applicationDbContext.SaveChanges();
+                return Ok(new Message<int>
+                {
+                    ReturnMessage = "Success",
+                    IsSuccess = true
+                });
+            }
+            catch { }
 
             return Ok(new Message<int>
             {

@@ -8,7 +8,9 @@ namespace VoterService.Utility
     public class Global
     {
         public static string DefaultConnection = "";
-        public static int VOTED = 2;
+        public static int VOTED = 3;
+        public static int NOT_VOTED = 2;
+        public static int ENTERED = 1;
 
 //        public const int SEARCH_USERID = 1;
 //        public const int SEARCH_ID = 2;
