@@ -21,6 +21,11 @@ namespace VoterService.Controllers
             _configuration = configuration;
         }
 
+        public IActionResult Index()
+        {
+            return Ok("Voter Service");
+        }
+
         // Check whether created database, if not create db * table using dbcontext according to district
         private bool PrepareDB(int nIdx)
         {
