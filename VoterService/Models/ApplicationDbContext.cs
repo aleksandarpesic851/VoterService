@@ -54,6 +54,9 @@ namespace VoterService.Models
                     .HasColumnName("province")
                     .HasColumnType("int");
 
+                entity.Property(e => e.party)
+                    .HasColumnName("party")
+                    .HasColumnType("int");
             });
         }
     }

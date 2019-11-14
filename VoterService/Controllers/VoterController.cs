@@ -89,26 +89,30 @@ namespace VoterService.Controllers
             });
         }
 
-        //nIdx : district id
-        [HttpGet]
-        public IActionResult GetResult(int district)
+        //Get vote result for a party
+        [HttpPost]
+        public IActionResult GetResult([FromBody]VoteResultSearchModel searchModel)
         {
-            // Check there is table for district, if not exist create new DB & table
-            bool IsDbReady = PrepareDB(district);
-            if (!IsDbReady)
+            VoteResult results = new VoteResult();
+            foreach(int district in searchModel.arrDistricts)
             {
-                return Ok(new Message<string>
+                // Check there is table for district, if not exist create new DB & table
+                bool IsDbReady = PrepareDB(district);
+                if (!IsDbReady)
                 {
-                    ReturnMessage = "Can't connect db",
-                    IsSuccess = false
-                });
+                    return Ok(new Message<string>
+                    {
+                        ReturnMessage = "Can't connect db",
+                        IsSuccess = false
+                    });
+                }
+
+
+                results.vote += _applicationDbContext.Voters.Where(e => e.vote_state == Global.VOTED && e.party == searchModel.party).Count();
+//                results.not_vote = _applicationDbContext.Voters.Where(e => e.vote_state == Global.ENTERED).Count();
+                results.registerdVoter += _applicationDbContext.Voters.Count();
             }
 
-            VoteResult results = new VoteResult();
-
-            results.vote = _applicationDbContext.Voters.Where(e => e.vote_state == Global.VOTED).Count();
-            results.not_vote = _applicationDbContext.Voters.Where(e => e.vote_state == Global.ENTERED).Count();
-            results.registerdVoter = _applicationDbContext.Voters.Count();
 
             return Ok(new Message<VoteResult>
             {
@@ -204,6 +208,7 @@ namespace VoterService.Controllers
                 if (voter != null)
                 {
                     voter.vote_state = vote.state;
+                    voter.party = vote.party;
                     _applicationDbContext.Voters.Update(voter);
                     _applicationDbContext.SaveChanges();
                     return Ok(new Message<int>
